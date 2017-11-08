@@ -8,5 +8,5 @@ RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 EXPOSE 5001/tcp
-
-CMD ["python3", "-u", "cvpartner-rest.py"]
+ENTRYPOINT ["python3"]
+CMD ["cvpartner-rest.py"]
