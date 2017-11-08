@@ -101,9 +101,9 @@ This will result into returned entities:
   "docker": {
     "environment": {
       "baseurl": "https://some-rest-service.com/v1/",
+      "next_page": "next.href",
       "entities_path": "values", #in which property your entities reside in the result from GET
-      "headers": "{'Accept':'application/json', 'Authorization':'$SECRET(token)'}",
-
+      "headers": "{'Accept':'application/json', 'Authorization':'$SECRET(token)'}"
     },
     "image": "sesamcommunity/cvpartner-rest:latest",
     "port": 5000
@@ -111,4 +111,3 @@ This will result into returned entities:
 }
 ```
 
- 
