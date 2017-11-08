@@ -100,7 +100,7 @@ This will result into returned entities:
   "type": "system:microservice",
   "docker": {
     "environment": {
-      "baseurl": "https://some-rest-service.com/v1/",
+      "base_url": "https://some-rest-service.com/v1/",
       "next_page": "next.href",
       "entities_path": "values", #in which property your entities reside in the result from GET
       "headers": "{'Accept':'application/json', 'Authorization':'$SECRET(token)'}"
