@@ -9,4 +9,4 @@ RUN pip install -r requirements.txt
 
 EXPOSE 5000/tcp
 ENTRYPOINT ["python3"]
-CMD ["cvpartner-rest.py"]
+CMD ["cvpartner.py"]
