@@ -3,7 +3,7 @@ import os
 import requests
 import logging
 import json
-from service import dotdictify
+import dotdictify
 
 app = Flask(__name__)
 logger = None
