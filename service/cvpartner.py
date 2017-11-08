@@ -32,6 +32,7 @@ def get(path):
         logger.info("Fetching data from url: %s", next_page)
         req = requests.get(next_page, headers=headers)
         if req.status_code != 200:
+            logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
             raise AssertionError ("Unexpected response status code: %d with response text %s"%(req.status_code, req.text))
         dict = dotdictify.dotdictify(json.loads(req.text))
         entities.extend(dict.get(os.environ.get("entities_path")))
