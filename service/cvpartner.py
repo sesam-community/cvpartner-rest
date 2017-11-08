@@ -4,6 +4,7 @@ import requests
 import logging
 import json
 import dotdictify
+from time import sleep
 
 app = Flask(__name__)
 logger = None
@@ -29,6 +30,10 @@ def get(path):
     entities = []
     page_counter = 1
     while next_page is not None:
+        if os.environ.get('sleep') is not None:
+            logger.info("sleeping for %s milliseconds", os.environ.get('sleep') )
+            sleep(float(os.environ.get('sleep')))
+
         logger.info("Fetching data from url: %s", next_page)
         req = requests.get(next_page, headers=headers)
         if req.status_code != 200:
