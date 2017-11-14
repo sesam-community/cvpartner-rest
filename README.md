@@ -92,6 +92,18 @@ This will result into returned entities:
 ]
 ```
 
+
+##### POST example paged-entity - pipe config
+```
+[
+    {
+        "_id": "foo",
+        "post_url": "v3/cvs/:user_id/:cv_id"
+    }
+]
+```
+Use http_transform to get data from service that has special urls
+
 ##### Example configuration:
 
 ```
@@ -103,7 +115,8 @@ This will result into returned entities:
       "base_url": "https://some-rest-service.com/v1/",
       "next_page": "next.href",
       "entities_path": "values", #in which property your entities reside in the result from GET
-      "headers": "{'Accept':'application/json', 'Authorization':'$SECRET(token)'}"
+      "headers": "{'Accept':'application/json', 'Authorization':'$SECRET(token)'}",
+      "post_url": "post_url" #the property that contains the url to call
     },
     "image": "sesamcommunity/cvpartner-rest:latest",
     "port": 5000
