@@ -102,6 +102,7 @@ This will result into returned entities:
     }
 ]
 ```
+
 Use http_transform to get data from service that has special urls
 
 ##### Example configuration:
@@ -116,6 +117,7 @@ Use http_transform to get data from service that has special urls
       "next_page": "next.href",
       "entities_path": "values", #in which property your entities reside in the result from GET
       "headers": "{'Accept':'application/json', 'Authorization':'$SECRET(token)'}",
+      "sleep": "0.400", #sleep for 400 miliseconds between each rest call
       "post_url": "post_url" #the property that contains the url to call
     },
     "image": "sesamcommunity/cvpartner-rest:latest",
