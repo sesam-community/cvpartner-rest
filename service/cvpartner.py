@@ -55,7 +55,6 @@ def post():
     logger.info('Receiving entities on /post')
 
     entities = request.get_json()
-    logger.info(str(entities))
     result = []
     counter = 0
     if not isinstance(entities, list):
@@ -66,7 +65,7 @@ def post():
         result.extend(req.text)
         counter += 1
 
-    logger.info('Returning %s entities')
+    logger.info('Returning %s entities', counter)
 
     return Response(response=result, mimetype='application/json')
 
