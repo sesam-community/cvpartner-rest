@@ -17,13 +17,13 @@ stdout_handler.setFormatter(logging.Formatter(format_string))
 logger.addHandler(stdout_handler)
 logger.setLevel(logging.DEBUG)
 
+headers = {}
+if os.environ.get('headers') is not None:
+    headers = json.loads(os.environ.get('headers').replace("'","\""))
+
 @app.route("/<path:path>", methods=["GET"])
 def get(path):
     origin_path = os.environ.get("base_url") + path
-
-    headers = {}
-    if os.environ.get('headers') is not None:
-        headers = json.loads(os.environ.get('headers').replace("'","\""))
 
     next_page = origin_path
 
@@ -49,6 +49,18 @@ def get(path):
     logger.info('Returning entities from %i pages', page_counter)
     return Response(response=json.dumps(entities), mimetype='application/json')
 
+
+@app.route("/post", methods=["POST"])
+def post():
+    entities = request.get_json()
+    if not isinstance(entities, list):
+        entities = [entities]
+    for entity in entities:
+        url = os.environ.get("base_url") + entity[os.environ.get("post_url")]
+        req = requests.get(url, headers=headers)
+
+
+    return Response(response=req.text, mimetype='application/json')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=os.environ.get('port',5000))
