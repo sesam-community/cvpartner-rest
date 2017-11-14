@@ -52,15 +52,22 @@ def get(path):
 
 @app.route("/post", methods=["POST"])
 def post():
+    logger.info('Receiving entities on /post')
+
     entities = request.get_json()
+    result = []
+    counter = 0
     if not isinstance(entities, list):
         entities = [entities]
     for entity in entities:
         url = os.environ.get("base_url") + entity[os.environ.get("post_url")]
         req = requests.get(url, headers=headers)
+        result.extend(req.text)
+        counter += 1
 
+    logger.info('Returning %s entities')
 
-    return Response(response=req.text, mimetype='application/json')
+    return Response(response=result, mimetype='application/json')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=os.environ.get('port',5000))
