@@ -62,7 +62,12 @@ def post():
     for entity in entities:
         url = os.environ.get("base_url") + entity[os.environ.get("post_url")]
         req = requests.get(url, headers=headers)
-        result.extend(req.text)
+        if os.environ.get('set_id') is not None and os.environ.get('set_id') in entity.keys():
+            req_json = json.loads(req.text)
+            req_json['_id'] = entity['_id']
+            result.extend(json.dumps(req_json))
+        else:
+            result.extend(req.text)
         counter += 1
 
     logger.info('Returning %s entities', counter)
