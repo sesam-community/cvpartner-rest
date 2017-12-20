@@ -5,6 +5,8 @@ import logging
 import json
 import dotdictify
 from time import sleep
+import base64
+
 
 app = Flask(__name__)
 logger = None
@@ -21,58 +23,153 @@ headers = {}
 if os.environ.get('headers') is not None:
     headers = json.loads(os.environ.get('headers').replace("'","\""))
 
-@app.route("/<path:path>", methods=["GET"])
-def get(path):
-    origin_path = os.environ.get("base_url") + path
+def encode(v):
+    for key, value in v.items():
+        if isinstance(value,dict):
+            encode(value)
+        else:
+            v[key] = base64.b64encode(requests.get(value).content).decode("utf-8")
 
-    next_page = origin_path
+    return v
 
-    entities = []
-    page_counter = 1
-    while next_page is not None:
-        if os.environ.get('sleep') is not None:
-            logger.info("sleeping for %s milliseconds", os.environ.get('sleep') )
-            sleep(float(os.environ.get('sleep')))
+def transform(obj):
+    res = {}
+    # print(obj.items())
+    for k, v in obj.items():
+        if k == "image":
+            if dotdictify.dotdictify(v).large.url is not None:
+                logger.info("Encoding images from url to base64...")
+                res[k] = encode(v)
 
-        logger.info("Fetching data from url: %s", next_page)
-        req = requests.get(next_page, headers=headers)
+            else:
+                pass
+        try:
+            _ = json.dumps(v)
+        except Exception:
+            pass
+        else:
+            res[k] = v
+    return res
+
+class DataAccess:
+
+    def __get_all_users(self, path):
+        logger.info("Fetching data from url: %s", path)
+        url=os.environ.get("base_url") + path
+        req = requests.get(url, headers=headers)
+
         if req.status_code != 200:
             logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            raise AssertionError ("Unexpected response status code: %d with response text %s"%(req.status_code, req.text))
-        dict = dotdictify.dotdictify(json.loads(req.text))
-        entities.extend(dict.get(os.environ.get("entities_path")))
-        if dict.get(os.environ.get('next_page')) is not None:
-            page_counter+=1
-            next_page = dict.get(os.environ.get('next_page'))
-        else:
-            next_page = None
-    logger.info('Returning entities from %i pages', page_counter)
-    return Response(response=json.dumps(entities), mimetype='application/json')
+            raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+        clean = json.loads(req.text)
+        for entity in clean:
+            yield transform(entity)
 
-
-@app.route("/post", methods=["POST"])
-def post():
-    logger.info('Receiving entities on /post')
-
-    entities = request.get_json()
-    result = []
-    counter = 0
-    if not isinstance(entities, list):
-        entities = [entities]
-    for entity in entities:
-        url = os.environ.get("base_url") + entity[os.environ.get("post_url")]
+    def __get_all_cvs(self, path):
+        logger.info("Fetching data from url: %s", path)
+        url=os.environ.get("base_url") + path
         req = requests.get(url, headers=headers)
-        if os.environ.get('set_id') is not None and os.environ.get('set_id') in entity.keys():
-            req_json = json.loads(req.text)
-            req_json['_id'] = entity['_id']
-            result.extend(json.dumps(req_json))
+
+        if req.status_code != 200:
+            logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+            raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+        clean = json.loads(req.text)
+        cv_url = os.environ.get("base_url") + "v3/cvs/"
+        for entity in clean:
+            for k, v in entity.items():
+                if k == "id":
+                    cv_url += v + "/"
+            for k, v in entity.items():
+                if k == "default_cv_id":
+                    cv_url += v
+            req = requests.get(cv_url, headers=headers)
+            if req.status_code != 200:
+                logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+                raise AssertionError(
+                    "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+            cv = json.loads(req.text)
+            yield transform(cv)
+            cv_url = os.environ.get("base_url") + "v3/cvs/"
+
+    def __get_all_paged_entities(self, path):
+        logger.info("Fetching data from paged url: %s", path)
+        url = os.environ.get("base_url") + path
+        next_page = url
+        page_counter = 1
+        while next_page is not None:
+            if os.environ.get('sleep') is not None:
+                logger.info("sleeping for %s milliseconds", os.environ.get('sleep') )
+                sleep(float(os.environ.get('sleep')))
+
+            logger.info("Fetching data from url: %s", next_page)
+            req = requests.get(next_page, headers=headers)
+            if req.status_code != 200:
+                logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+                raise AssertionError ("Unexpected response status code: %d with response text %s"%(req.status_code, req.text))
+            dict = dotdictify.dotdictify(json.loads(req.text))
+            yield transform(dict)
+
+            dict.get(os.environ.get("entities_path"))
+            if dict.get(os.environ.get('next_page')) is not None:
+                page_counter+=1
+                next_page = dict.get(os.environ.get('next_page'))
+            else:
+                next_page = None
+        logger.info('Returning entities from %i pages', page_counter)
+
+
+    def get_paged_entities(self,path):
+        print("getting all paged")
+        return self.__get_all_paged_entities(path)
+
+    def get_users(self, path):
+        print('getting all users')
+        return self.__get_all_users(path)
+
+    def get_cvs(self, path):
+        print('getting all cvs')
+        return self.__get_all_cvs(path)
+
+data_access_layer = DataAccess()
+
+
+def stream_json(clean):
+    first = True
+    yield '['
+    for i, row in enumerate(clean):
+        if not first:
+            yield ','
         else:
-            result.extend(req.text)
-        counter += 1
+            first = False
+        yield json.dumps(row)
+    yield ']'
 
-    logger.info('Returning %s entities', counter)
+@app.route("/<path:path>", methods=["GET"])
+def get(path):
+    entities = data_access_layer.get_paged_entities(path)
+    return Response(
+        stream_json(entities),
+        mimetype='application/json'
+    )
 
-    return Response(response=result, mimetype='application/json')
+@app.route("/user", methods=["GET"])
+def get_user():
+    path = os.environ.get("user_url")
+    entities = data_access_layer.get_users(path)
+    return Response(
+        stream_json(entities),
+        mimetype='application/json'
+    )
+
+@app.route("/cv", methods=["GET"])
+def get_cv():
+    path = os.environ.get("user_url")
+    #path = "v1/users?" + "limit=" + os.environ.get("limit")
+    entities = data_access_layer.get_cvs(path)
+    return Response(
+        stream_json(entities),
+        mimetype='application/json'
+    )
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=os.environ.get('port',5000))

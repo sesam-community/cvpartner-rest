@@ -20,7 +20,7 @@ This microservice needs information about path to the url of the next page (more
 ]
 ```
 
-##### GET example paged-entity - pipe config
+##### GET example pipe config
 ```
 [
     "_id": "cvpartner-users",
@@ -28,7 +28,7 @@ This microservice needs information about path to the url of the next page (more
     "source": {
         "type": "json",
         "system": "cvpartner",
-        "url": "/users"
+        "url": "/user"
     }
 ]
 ```
@@ -92,19 +92,6 @@ This will result into returned entities:
 ]
 ```
 
-
-##### POST example paged-entity - pipe config
-```
-[
-    {
-        "_id": "foo",
-        "post_url": "v3/cvs/:user_id/:cv_id"
-    }
-]
-```
-
-Use http_transform to get data from service that has special urls
-
 ##### Example configuration:
 
 ```
@@ -118,7 +105,7 @@ Use http_transform to get data from service that has special urls
       "entities_path": "values", #in which property your entities reside in the result from GET
       "headers": "{'Accept':'application/json', 'Authorization':'$SECRET(token)'}",
       "sleep": "0.400", #sleep for 400 miliseconds between each rest call
-      "post_url": "post_url" #the property that contains the url to call
+      "user_url": "v1/user?limit=2000"
     },
     "image": "sesamcommunity/cvpartner-rest:latest",
     "port": 5000
