@@ -164,7 +164,6 @@ def get_user():
 @app.route("/cv", methods=["GET"])
 def get_cv():
     path = os.environ.get("user_url")
-    #path = "v1/users?" + "limit=" + os.environ.get("limit")
     entities = data_access_layer.get_cvs(path)
     return Response(
         stream_json(entities),
