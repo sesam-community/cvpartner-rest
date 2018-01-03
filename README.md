@@ -5,7 +5,6 @@ A small microservice to get entities from a REST api.
 
 This microservice needs information about path to the url of the next page (more in example config).
 
-
 ##### RETURNED example paged-entity
 ```
 [
