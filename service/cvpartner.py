@@ -107,9 +107,9 @@ class DataAccess:
                 logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
                 raise AssertionError ("Unexpected response status code: %d with response text %s"%(req.status_code, req.text))
             dict = dotdictify.dotdictify(json.loads(req.text))
-            yield transform(dict)
+            for entity in dict.get(os.environ.get("entities_path")):
+                yield transform(entity)
 
-            dict.get(os.environ.get("entities_path"))
             if dict.get(os.environ.get('next_page')) is not None:
                 page_counter+=1
                 next_page = dict.get(os.environ.get('next_page'))
