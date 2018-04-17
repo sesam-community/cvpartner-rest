@@ -107,11 +107,13 @@ class DataAccess:
                 logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
                 raise AssertionError ("Unexpected response status code: %d with response text %s"%(req.status_code, req.text))
             dict = dotdictify.dotdictify(json.loads(req.text))
+<<<<<<< HEAD
 
+=======
+>>>>>>> e3c2c717261c12d1dddd09ea50bb777aa25d78d5
             for entity in dict.get(os.environ.get("entities_path")):
                 yield transform(entity)
 
-            dict.get(os.environ.get("entities_path"))
             if dict.get(os.environ.get('next_page')) is not None:
                 page_counter+=1
                 next_page = dict.get(os.environ.get('next_page'))
@@ -173,4 +175,4 @@ def get_cv():
     )
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=os.environ.get('port',5000))
+    app.run(debug=True, host='0.0.0.0', threaded=True, port=os.environ.get('port',5000))
