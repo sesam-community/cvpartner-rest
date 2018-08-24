@@ -32,9 +32,11 @@ def encode(v):
 
     return v
 
+def str_to_bool(string_input):
+    return str(string_input).lower() == "true"
+
 def transform(obj):
     res = {}
-    # print(obj.items())
     for k, v in obj.items():
         if k == "image":
             if dotdictify.dotdictify(v).large.url is not None:
@@ -88,6 +90,9 @@ class DataAccess:
                 raise AssertionError(
                     "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
             cv = json.loads(req.text)
+            if str_to_bool(os.environ.get('delete_company_images', "False")) == True:
+                for i in range(len(cv["project_experiences"])):
+                    del cv["project_experiences"][i]["images"]
             yield transform(cv)
             cv_url = os.environ.get("base_url") + "v3/cvs/"
 
@@ -116,7 +121,6 @@ class DataAccess:
             else:
                 next_page = None
         logger.info('Returning entities from %i pages', page_counter)
-
 
     def get_paged_entities(self,path):
         print("getting all paged")
