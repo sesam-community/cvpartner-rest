@@ -104,7 +104,8 @@ This will result into returned entities:
       "entities_path": "values", #in which property your entities reside in the result from GET
       "headers": "{'Accept':'application/json', 'Authorization':'$SECRET(token)'}",
       "sleep": "0.400", #sleep for 400 miliseconds between each rest call
-      "user_url": "v1/user?limit=2000"
+      "user_url": "v1/user?limit=2000",
+      "delete_company_images": "True" #we don't want generic images in Sesam, removes them on the way in. Defaults to False
     },
     "image": "sesamcommunity/cvpartner-rest:latest",
     "port": 5000
