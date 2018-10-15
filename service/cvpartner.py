@@ -148,13 +148,27 @@ def stream_json(clean):
         yield json.dumps(row)
     yield ']'
 
-@app.route("/<path:path>", methods=["GET"])
+@app.route("/<path:path>", methods=["GET", "POST"])
 def get(path):
-    entities = data_access_layer.get_paged_entities(path)
-    return Response(
-        stream_json(entities),
-        mimetype='application/json'
-    )
+    if request.method == "POST":
+        post_url = path
+        entities= request.get_json()
+        headers = json_loads(os.environ.get(post_headers).replace("'","\""))
+        response = requests.post(post_url, data=entities, headers=headers)
+        if response.status_code is not 200:
+            logger.error("Got error code: " + str(response.status_code) + "with text: " + response.text)
+            return Response(response.text, status=response.status_code, mimetype='application/json')
+        logger.info("Prosessed " + str(len(entities)) + " entities")
+        return Response(response.text, status=response.status_code, mimetype='application/json')
+    elif request.method == "GET":
+        entities = data_access_layer.get_paged_entities(path)
+        return Response(
+            stream_json(entities),
+            mimetype='application/json'
+        )
+    else:
+        logger.info("undefined request method")
+
 
 @app.route("/user", methods=["GET"])
 def get_user():
