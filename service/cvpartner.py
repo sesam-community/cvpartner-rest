@@ -65,7 +65,7 @@ class DataAccess:
             raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
         clean = json.loads(req.text)
         for entity in clean:
-            yield transform(entity)
+            yield entity
 
     def __get_all_cvs(self, path):
         logger.info("Fetching data from url: %s", path)
@@ -148,7 +148,7 @@ def stream_json(clean):
         yield json.dumps(row)
     yield ']'
 
-@app.route("/<path:path>", methods=["GET"])
+@app.route("/<path:path>", methods=["GET", "POST"])
 def get(path):
     entities = data_access_layer.get_paged_entities(path)
     return Response(
