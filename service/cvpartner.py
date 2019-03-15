@@ -122,6 +122,96 @@ class DataAccess:
                 next_page = None
         logger.info('Returning entities from %i pages', page_counter)
 
+    def __get_all_references(self, path):
+        logger.info('Fetching data from paged url: %s', path)
+        url = os.environ.get("base_url") + path
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": "Token 4d46ab8e5dddb0fd1fcb93567ea94482"
+        }
+        post_data = {
+            "offset": 0,
+            "size": 10,
+            "must": [
+                {
+                    "bool": {
+                        "should": [
+                            {
+                                "exact": {
+                                    "field": "office_id",
+                                    "value": "5761326569702d4e41000000"
+                                }
+                            },
+                            {
+                                "exact": {
+                                    "field": "office_id",
+                                    "value": "580e3e9a2c04d627b6210c52"
+                                }
+                            },
+                            {
+                                "exact": {
+                                    "field": "office_id",
+                                    "value": "5085b1c5a6add17a1500000e"
+                                }
+                            },
+                            {
+                                "exact": {
+                                    "field": "office_id",
+                                    "value": "5761332f69702d4fa9000000"
+                                }
+                            },
+                            {
+                                "exact": {
+                                    "field": "office_id",
+                                    "value": "576120ce69702d333e000000"
+                                }
+                            },
+                            {
+                                "exact": {
+                                    "field": "office_id",
+                                    "value": "576120a469702d32db000000"
+                                }
+                            },
+                            {
+                                "exact": {
+                                    "field": "office_id",
+                                    "value": "5837ee3d2c04d618a4d70891"
+                                }
+                            },
+                            {
+                                "exact": {
+                                    "field": "office_id",
+                                    "value": "5837ee672c04d618f47a2988"
+                                }
+                            },
+                            {
+                                "exact": {
+                                    "field": "office_id",
+                                    "value": "5761224069702d3754000000"
+                                }
+                            },
+                            {
+                                "not_exist": "office_id"
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+        total_amount = json.loads(requests.post(url, data=json.dumps(post_data), headers=headers).text)["total"]
+        counter = 0
+        size = 10
+        while counter < total_amount:
+            logger.info(post_data)
+            req = requests.post(url, data=json.dumps(post_data), headers=headers)
+            res = dotdictify.dotdictify(json.loads(req.text))
+            counter += size
+            post_data["offset"] = counter
+            entities = res.get(os.environ.get("references_path"))
+            for entity in entities:
+                yield(entity)
+
     def get_paged_entities(self,path):
         print("getting all paged")
         return self.__get_all_paged_entities(path)
@@ -133,6 +223,10 @@ class DataAccess:
     def get_cvs(self, path):
         print('getting all cvs')
         return self.__get_all_cvs(path)
+
+    def get_references(self, path):
+        print('getting all references')
+        return self.__get_all_references(path)
 
 data_access_layer = DataAccess()
 
@@ -151,6 +245,15 @@ def stream_json(clean):
 @app.route("/<path:path>", methods=["GET", "POST"])
 def get(path):
     entities = data_access_layer.get_paged_entities(path)
+    return Response(
+        stream_json(entities),
+        mimetype='application/json'
+    )
+
+@app.route("/references", methods=["GET"])
+def get_references():
+    path = os.environ.get("reference_url")
+    entities = data_access_layer.get_references(path)
     return Response(
         stream_json(entities),
         mimetype='application/json'
