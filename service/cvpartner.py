@@ -6,9 +6,11 @@ import json
 import dotdictify
 from time import sleep
 import base64
+import cherrypy
 
 
 app = Flask(__name__)
+
 logger = None
 format_string = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 logger = logging.getLogger('cvpartner-rest-service')
@@ -128,7 +130,7 @@ class DataAccess:
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "Authorization": "Token 4d46ab8e5dddb0fd1fcb93567ea94482"
+            "Authorization": os.environ.get('token')
         }
         post_data = {
             "offset": 0,
@@ -278,4 +280,17 @@ def get_cv():
     )
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', threaded=True, port=os.environ.get('port',5000))
+    cherrypy.tree.graft(app, '/')
+
+    # Set the configuration of the web server to production mode
+    cherrypy.config.update({
+        'environment': 'production',
+        'engine.autoreload_on': False,
+        'log.screen': True,
+        'server.socket_port': 5000,
+        'server.socket_host': '0.0.0.0'
+    })
+
+    # Start the CherryPy WSGI web server
+    cherrypy.engine.start()
+    cherrypy.engine.block()
