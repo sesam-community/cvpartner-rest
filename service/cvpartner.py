@@ -132,84 +132,15 @@ class DataAccess:
             "Content-Type": "application/json",
             "Authorization": os.environ.get('token')
         }
-        post_data = {
-            "offset": 0,
-            "size": 10,
-            "must": [
-                {
-                    "bool": {
-                        "should": [
-                            {
-                                "exact": {
-                                    "field": "office_id",
-                                    "value": "5761326569702d4e41000000"
-                                }
-                            },
-                            {
-                                "exact": {
-                                    "field": "office_id",
-                                    "value": "580e3e9a2c04d627b6210c52"
-                                }
-                            },
-                            {
-                                "exact": {
-                                    "field": "office_id",
-                                    "value": "5085b1c5a6add17a1500000e"
-                                }
-                            },
-                            {
-                                "exact": {
-                                    "field": "office_id",
-                                    "value": "5761332f69702d4fa9000000"
-                                }
-                            },
-                            {
-                                "exact": {
-                                    "field": "office_id",
-                                    "value": "576120ce69702d333e000000"
-                                }
-                            },
-                            {
-                                "exact": {
-                                    "field": "office_id",
-                                    "value": "576120a469702d32db000000"
-                                }
-                            },
-                            {
-                                "exact": {
-                                    "field": "office_id",
-                                    "value": "5837ee3d2c04d618a4d70891"
-                                }
-                            },
-                            {
-                                "exact": {
-                                    "field": "office_id",
-                                    "value": "5837ee672c04d618f47a2988"
-                                }
-                            },
-                            {
-                                "exact": {
-                                    "field": "office_id",
-                                    "value": "5761224069702d3754000000"
-                                }
-                            },
-                            {
-                                "not_exist": "office_id"
-                            }
-                        ]
-                    }
-                }
-            ]
-        }
-        total_amount = json.loads(requests.post(url, data=json.dumps(post_data), headers=headers).text)["total"]
+        reference_data = json.loads(os.environ.get('reference_post').replace("'","\""))
+        total_amount = json.loads(requests.post(url, data=json.dumps(reference_data), headers=headers).text)["total"]
         counter = 0
         size = 10
         while counter < total_amount:
-            logger.info(post_data)
-            req = requests.post(url, data=json.dumps(post_data), headers=headers)
+            req = requests.post(url, data=json.dumps(reference_data), headers=headers)
             res = dotdictify.dotdictify(json.loads(req.text))
             counter += size
-            post_data["offset"] = counter
+            reference_data["offset"] = counter
             entities = res.get(os.environ.get("references_path"))
             for entity in entities:
                 yield(entity)
