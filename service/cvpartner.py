@@ -143,8 +143,9 @@ class DataAccess:
             reference_data["offset"] = counter
             entities = res.get(os.environ.get("references_path"))
             for entity in entities:
-                yield(entity)
+                yield(entity.get("reference"))
 
+        logger.info("returned from all pages")
     def get_paged_entities(self,path):
         print("getting all paged")
         return self.__get_all_paged_entities(path)
