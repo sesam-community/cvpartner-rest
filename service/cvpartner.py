@@ -6,9 +6,11 @@ import json
 import dotdictify
 from time import sleep
 import base64
+import cherrypy
 
 
 app = Flask(__name__)
+
 logger = None
 format_string = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 logger = logging.getLogger('cvpartner-rest-service')
@@ -122,6 +124,27 @@ class DataAccess:
                 next_page = None
         logger.info('Returning entities from %i pages', page_counter)
 
+    def __get_all_references(self, path):
+        logger.info('Fetching data from paged url: %s', path)
+        url = os.environ.get("base_url") + path
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": os.environ.get('token')
+        }
+        reference_data = json.loads(os.environ.get('reference_post').replace("'","\""))
+        total_amount = json.loads(requests.post(url, data=json.dumps(reference_data), headers=headers).text)["total"]
+        counter = 0
+        size = 10
+        while counter < total_amount:
+            req = requests.post(url, data=json.dumps(reference_data), headers=headers)
+            res = dotdictify.dotdictify(json.loads(req.text))
+            counter += size
+            reference_data["offset"] = counter
+            entities = res.get(os.environ.get("references_path"))
+            for entity in entities:
+                yield(entity)
+
     def get_paged_entities(self,path):
         print("getting all paged")
         return self.__get_all_paged_entities(path)
@@ -133,6 +156,10 @@ class DataAccess:
     def get_cvs(self, path):
         print('getting all cvs')
         return self.__get_all_cvs(path)
+
+    def get_references(self, path):
+        print('getting all references')
+        return self.__get_all_references(path)
 
 data_access_layer = DataAccess()
 
@@ -151,6 +178,15 @@ def stream_json(clean):
 @app.route("/<path:path>", methods=["GET", "POST"])
 def get(path):
     entities = data_access_layer.get_paged_entities(path)
+    return Response(
+        stream_json(entities),
+        mimetype='application/json'
+    )
+
+@app.route("/references", methods=["GET"])
+def get_references():
+    path = os.environ.get("reference_url")
+    entities = data_access_layer.get_references(path)
     return Response(
         stream_json(entities),
         mimetype='application/json'
@@ -175,4 +211,17 @@ def get_cv():
     )
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', threaded=True, port=os.environ.get('port',5000))
+    cherrypy.tree.graft(app, '/')
+
+    # Set the configuration of the web server to production mode
+    cherrypy.config.update({
+        'environment': 'production',
+        'engine.autoreload_on': False,
+        'log.screen': True,
+        'server.socket_port': 5000,
+        'server.socket_host': '0.0.0.0'
+    })
+
+    # Start the CherryPy WSGI web server
+    cherrypy.engine.start()
+    cherrypy.engine.block()
