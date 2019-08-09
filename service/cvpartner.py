@@ -19,7 +19,7 @@ logger = logging.getLogger('cvpartner-rest-service')
 stdout_handler = logging.StreamHandler()
 stdout_handler.setFormatter(logging.Formatter(format_string))
 logger.addHandler(stdout_handler)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.getLevelName(os.environ.get('log_level', 'INFO')))
 
 headers = {}
 if os.environ.get('headers') is not None:
@@ -67,6 +67,7 @@ class DataAccess:
         clean = "start"
         while clean == "start" or len(clean) == 100:
             url = os.environ.get("base_url") + path + "?offset=" + str(offset)
+            logger.debug("url :" + url)
             req = requests.get(url, headers=headers)
             if req.status_code != 200:
                 logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
@@ -77,9 +78,9 @@ class DataAccess:
                 yield entity
 
     def __post_user(self, url, entity):
-        print("url: " + url)
-        print('entity["payload"]:')
-        print(entity["payload"])
+        logger.debug("url: " + url)
+        logger.debug('entity["payload"]:')
+        logger.debug(entity["payload"])
         req = requests.post(url, headers=headers, json=entity["payload"])
         if req.status_code != 200:
             logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
@@ -88,11 +89,10 @@ class DataAccess:
         return str(req.status_code)
 
     def __put_user(self, url, entity):
-        entity_id = entity["_id"]
-        url = url + "/" + entity_id
-        print("url: " + url)
-        print('entity["payload"]:')
-        print(entity["payload"])
+        url = url + "/" + entity["id"]
+        logger.debug("url: " + url)
+        logger.debug('entity["payload"]:')
+        logger.debug(entity["payload"])
         req = requests.put(url, headers=headers, json=entity["payload"])
         if req.status_code != 200:
             logger.error(
@@ -137,7 +137,7 @@ class DataAccess:
         page_counter = 1
         while next_page is not None:
             if os.environ.get('sleep') is not None:
-                logger.info("sleeping for %s milliseconds", os.environ.get('sleep'))
+                logger.debug("sleeping for %s milliseconds", os.environ.get('sleep'))
                 sleep(float(os.environ.get('sleep')))
 
             logger.info("Fetching data from url: %s", next_page)
@@ -192,9 +192,9 @@ class DataAccess:
             yield entity
 
     def __post_custom_tag(self, url, entity):
-        print("url: " + url)
-        print('entity["payload"]:')
-        print(entity["payload"])
+        logger.debug("url: " + url)
+        logger.debug('entity["payload"]:')
+        logger.debug(entity["payload"])
         req = requests.post(url, headers=headers, json=entity["payload"])
         if req.status_code != 200:
             logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
@@ -203,11 +203,10 @@ class DataAccess:
         return str(req.status_code)
 
     def __put_custom_tag(self, url, entity):
-        entity_id = entity["payload"]["masterdata"]["id"]
-        url = url + "/" + entity_id
-        print("url: " + url)
-        print('entity["payload"]:')
-        print(entity["payload"])
+        url = url + "/" + entity["id"]
+        logger.debug("url: " + url)
+        logger.debug('entity["payload"]:')
+        logger.debug(entity["payload"])
         req = requests.put(url, headers=headers, json=entity["payload"])
         if req.status_code != 200:
             logger.error(
@@ -217,18 +216,22 @@ class DataAccess:
         return str(req.status_code)
 
     def get_paged_entities(self, path):
-        print("getting all paged")
+        logger.info("getting all paged")
         return self.__get_all_paged_entities(path)
 
     def get_users(self, path):
-        print('getting all users')
+        logger.info('getting all users')
         return self.__get_all_users(path)
 
     def post_or_put_users(self, path, entities):
-        print('posting/putting users')
+        logger.info('posting/putting users')
         url = os.environ.get("base_url") + path
         status = ""
         for entity in entities:
+            if os.environ.get('sleep') is not None:
+                logger.debug("sleeping for %s milliseconds", os.environ.get('sleep'))
+                sleep(float(os.environ.get('sleep')))
+
             if entity["operation"] == "post":
                 status = self.__post_user(url, entity)
             elif entity["operation"] == "put":
@@ -236,26 +239,31 @@ class DataAccess:
         return status
 
     def get_cvs(self, path):
-        print('getting all cvs')
+        logger.info('getting all cvs')
         return self.__get_all_cvs(path)
 
     def get_references(self, path):
-        print('getting all references')
+        logger.info('getting all references')
         return self.__get_all_references(path)
 
     def get_custom_tag_categories(self, path):
-        print('getting all categories')
+        logger.info('getting all categories')
         return self.__get_all_categories(path)
 
     def post_or_put_custom_tags(self, path, entities):
-        print('posting/putting custom tags')
+        logger.info('posting/putting custom tags')
         url = os.environ.get("base_url") + path
         status = ""
         for entity in entities:
+            if os.environ.get('sleep') is not None:
+                logger.debug("sleeping for %s milliseconds", os.environ.get('sleep'))
+                sleep(float(os.environ.get('sleep')))
+
             if entity["operation"] == "post":
                 status = self.__post_custom_tag(url, entity)
             elif entity["operation"] == "put":
                 status = self.__put_custom_tag(url, entity)
+
         return status
 
 
