@@ -103,32 +103,40 @@ class DataAccess:
 
     def __get_all_cvs(self, path):
         logger.info("Fetching data from url: %s", path)
-        url = os.environ.get("base_url") + path
-        req = requests.get(url, headers=headers)
+        offset = 0
+        clean = "start"
+        while clean == "start" or len(clean) == 100:
+            url = os.environ.get("base_url") + path + "?offset=" + str(offset)
+            logger.debug("url :" + url)
+            req = requests.get(url, headers=headers)
 
-        if req.status_code != 200:
-            logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-        clean = json.loads(req.text)
-        cv_url = os.environ.get("base_url") + "v3/cvs/"
-        for entity in clean:
-            for k, v in entity.items():
-                if k == "id":
-                    cv_url += v + "/"
-            for k, v in entity.items():
-                if k == "default_cv_id":
-                    cv_url += v
-            req = requests.get(cv_url, headers=headers)
             if req.status_code != 200:
                 logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-                raise AssertionError(
-                    "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            cv = json.loads(req.text)
-            if str_to_bool(os.environ.get('delete_company_images', "False")) == True:
-                for i in range(len(cv["project_experiences"])):
-                    del cv["project_experiences"][i]["images"]
-            yield transform(cv)
+                raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+            clean = json.loads(req.text)
+            offset += len(clean)
             cv_url = os.environ.get("base_url") + "v3/cvs/"
+            for entity in clean:
+                for k, v in entity.items():
+                    if k == "id":
+                        cv_url += v + "/"
+                for k, v in entity.items():
+                    if k == "default_cv_id":
+                        cv_url += v
+                if os.environ.get('sleep') is not None:
+                    logger.debug("sleeping for %s milliseconds", os.environ.get('sleep'))
+                    sleep(float(os.environ.get('sleep')))
+                req = requests.get(cv_url, headers=headers)
+                if req.status_code != 200:
+                    logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+                    raise AssertionError(
+                        "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+                cv = json.loads(req.text)
+                if str_to_bool(os.environ.get('delete_company_images', "False")) == True:
+                    for i in range(len(cv["project_experiences"])):
+                        del cv["project_experiences"][i]["images"]
+                yield transform(cv)
+                cv_url = os.environ.get("base_url") + "v3/cvs/"
 
     def __get_all_paged_entities(self, path):
         logger.info("Fetching data from paged url: %s", path)
