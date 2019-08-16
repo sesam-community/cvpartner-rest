@@ -4,6 +4,8 @@
 #   --added `get()` method
 #   --added `if not dict.__contains__...` to `__contains__()`
 #   --can now accept None as key
+
+
 class dotdictify(dict):
     def __init__(self, value=None):
         if value is None:
