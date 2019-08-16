@@ -6,31 +6,21 @@ A small microservice to get entities from a REST api.
 This microservice needs information about path to the url of the next page (more in example config).
 
 ##### Environment variables
-```"base_url"```: The common, first part of the url to the REST-api. The other url variables are appended to base_url for use at runtime.
-
-```"custom_tag_category_url"```: Path for GET of custom tag categories containing their custom tags.
-
-```"custom_tag_url"```: Path for POST and PUT of custom tags.
-
-```"delete_company_images"```: We don't want generic images in Sesam, this removes them on the way in if "True". Defaults to "False".
-
-```"entities_path"```: In which property your entities reside in the result from GET.
-
-```"headers"```: The headers to send with your HTTP-request.
-
-```"log_level"```: Set the level of logging messages to output. Defaults to "INFO".
-
-```"next_page"```: Path in returned paged-entity object to href of next page.
-
-```"reference_post"```: Data to send with POST to reference_url
-
-```"reference_url"```: Path for GET of references.
-
-```"references_path"```: Path to references in return object from reference_url
-
-```"sleep"```:  Miliseconds to sleep between each rest call.
-
-```"user_url"```: Path to users in REST-api. Supports POST, PUT and GET.
+```
+"base_url": The common, first part of the url to the REST-api. The other url variables are appended to base_url for use at runtime.
+"custom_tag_category_url": Path for GET of custom tag categories containing their custom tags.
+"custom_tag_url": Path for POST and PUT of custom tags.
+"delete_company_images": We don't want generic images in Sesam, this removes them on the way in if "True". Defaults to "False".
+"entities_path": In which property your entities reside in the result from GET.
+"headers": The headers to send with your HTTP-request.
+"log_level": Set the level of logging messages to output. Defaults to "INFO".
+"next_page": Path in returned paged-entity object to href of next page.
+"reference_post": Data to send with POST to reference_url
+"reference_url": Path for GET of references.
+"references_path": Path to references in return object from reference_url
+"sleep":  Miliseconds to sleep between each rest call.
+"user_url": Path to users in REST-api. Supports POST, PUT and GET.
+```
 
 ##### RETURNED example paged-entity
 ```
