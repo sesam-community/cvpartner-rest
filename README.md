@@ -121,9 +121,7 @@ This will result into returned entities:
     "type": "json",
     "system": "cv-partner-rest",
     "url": "/custom_tag"
-  },
-  "batch_size": 1,
-  "checkpoint_interval": 1
+  }
 }
 ```
 

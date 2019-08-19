@@ -1,4 +1,4 @@
-from flask import Flask, request, Response
+from flask import Flask, request, Response, abort
 import os
 import requests
 import logging
@@ -84,8 +84,7 @@ class DataAccess:
         req = requests.post(url, headers=headers, json=entity["payload"])
         if req.status_code != 200:
             logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            raise AssertionError(
-                "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+            abort(req.status_code, req.json())
         return str(req.status_code)
 
     def __put_user(self, url, entity):
@@ -97,8 +96,7 @@ class DataAccess:
         if req.status_code != 200:
             logger.error(
                 "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            raise AssertionError(
-                "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+            abort(req.status_code, req.json())
         return str(req.status_code)
 
     def __get_all_cvs(self, path):
@@ -206,8 +204,7 @@ class DataAccess:
         req = requests.post(url, headers=headers, json=entity["payload"])
         if req.status_code != 200:
             logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            raise AssertionError(
-                "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+            abort(req.status_code, req.json())
         return str(req.status_code)
 
     def __put_custom_tag(self, url, entity):
@@ -219,8 +216,7 @@ class DataAccess:
         if req.status_code != 200:
             logger.error(
                 "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            raise AssertionError(
-                "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+            abort(req.status_code, req.json())
         return str(req.status_code)
 
     def get_paged_entities(self, path):
@@ -271,7 +267,6 @@ class DataAccess:
                 status = self.__post_custom_tag(url, entity)
             elif entity["operation"] == "put":
                 status = self.__put_custom_tag(url, entity)
-
         return status
 
 
