@@ -70,8 +70,7 @@ class DataAccess:
             logger.debug("url :" + url)
             req = requests.get(url, headers=headers)
             if req.status_code != 200:
-                logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-                raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+                req = self.check_error(req, url, headers, 'get')
             clean = json.loads(req.text)
             offset += len(clean)
             for entity in clean:
@@ -83,8 +82,7 @@ class DataAccess:
         logger.debug(entity["payload"])
         req = requests.post(url, headers=headers, json=entity["payload"])
         if req.status_code != 200:
-            logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            abort(req.status_code, req.json())
+            req = self.check_error(req, url, headers, 'post', 'json', entity["payload"])
         return str(req.status_code)
 
     def __put_user(self, url, entity):
@@ -94,9 +92,7 @@ class DataAccess:
         logger.debug(entity["payload"])
         req = requests.put(url, headers=headers, json=entity["payload"])
         if req.status_code != 200:
-            logger.error(
-                "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            abort(req.status_code, req.json())
+            req = self.check_error(req, url, headers, 'put', 'json', entity["payload"])
         return str(req.status_code)
 
     def __get_all_cvs(self, path):
@@ -107,15 +103,14 @@ class DataAccess:
             url = os.environ.get("base_url") + path + "?offset=" + str(offset)
             logger.debug("url :" + url)
             req = requests.get(url, headers=headers)
-
             if req.status_code != 200:
-                req = self.check_429(req, cv_url, headers)
+                req = self.check_error(req, url, headers, 'get')
 
             clean = json.loads(req.text)
             offset += len(clean)
             cv_url = os.environ.get("base_url") + "v3/cvs/"
             for entity in clean:
-                if entity.get('deactivated', ""):
+                if entity.get('deactivated'):
                     pass
                 for k, v in entity.items():
                     if k == "id":
@@ -125,7 +120,7 @@ class DataAccess:
                         cv_url += v
                 req = requests.get(cv_url, headers=headers)
                 if req.status_code != 200:
-                    req = self.check_429(req, cv_url, headers)
+                    req = self.check_error(req, cv_url, headers, 'get')
                 cv = json.loads(req.text)
                 if str_to_bool(os.environ.get('delete_company_images', "False")) == True:
                     for i in range(len(cv["project_experiences"])):
@@ -139,15 +134,10 @@ class DataAccess:
         next_page = url
         page_counter = 1
         while next_page is not None:
-            if os.environ.get('sleep') is not None:
-                logger.debug("sleeping for %s milliseconds", os.environ.get('sleep'))
-                sleep(float(os.environ.get('sleep')))
-
             logger.info("Fetching data from url: %s", next_page)
             req = requests.get(next_page, headers=headers)
             if req.status_code != 200:
-                logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-                raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+                req = self.check_error(req, next_page, headers, 'get')
             dict = dotdictify.dotdictify(json.loads(req.text))
             for entity in dict.get(os.environ.get("entities_path")):
                 yield transform(entity)
@@ -173,6 +163,8 @@ class DataAccess:
         size = 10
         while counter < total_amount:
             req = requests.post(url, data=json.dumps(reference_data), headers=headers)
+            if req.status_code != 200:
+                req = self.check_error(req, url, headers, 'post', 'data', json.dumps(reference_data))
             res = dotdictify.dotdictify(json.loads(req.text))
             counter += size
             reference_data["offset"] = counter
@@ -186,10 +178,8 @@ class DataAccess:
         logger.info("Fetching data from url: %s", path)
         url = os.environ.get("base_url") + path
         req = requests.get(url, headers=headers)
-
         if req.status_code != 200:
-            logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+            req = self.check_error(req, url, headers, 'get')
         clean = json.loads(req.text)
         for entity in clean:
             yield entity
@@ -200,8 +190,7 @@ class DataAccess:
         logger.debug(entity["payload"])
         req = requests.post(url, headers=headers, json=entity["payload"])
         if req.status_code != 200:
-            logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            abort(req.status_code, req.json())
+            req = self.check_error(req, url, headers, 'post', 'json', entity["payload"])
         return str(req.status_code)
 
     def __put_custom_tag(self, url, entity):
@@ -211,48 +200,50 @@ class DataAccess:
         logger.debug(entity["payload"])
         req = requests.put(url, headers=headers, json=entity["payload"])
         if req.status_code != 200:
-            logger.error(
-                "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-            abort(req.status_code, req.json())
+            req = self.check_error(req, cv_url, headers, 'put', 'json', entity["payload"])
         return str(req.status_code)
 
-    def check_429(self, req, cv_url, headers):
+    def check_error(self, req, url, headers, method, data_type = None, data = None):
         if req.status_code == 429:
-            if os.environ.get('sleep_increment') is not None:
-                return self.recursive_request(cv_url, headers, float(os.environ.get('sleep_increment')))                        
-            else:
-                logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-                raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+            return self.recursive_request(url, headers, req.headers.get('Retry-After'), method, data_type, data)                        
         else:
             logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
             raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))        
 
-    def recursive_request(self, cv_url, headers, sleep_increment):
-        if os.environ.get('sleep_total') == None:
-            os.environ['sleep_total'] = str(sleep_increment)
+    def recursive_request(self, url, headers, retry_after, method, data_type = None, data = None):
+        logger.info("Sleeping for %.2f seconds" % float(retry_after))
+        sleep(float(retry_after))
+        if method == 'get':
+            req = requests.get(url, headers=headers)
+
+        elif method == 'post':
+            if data_type == 'json':
+                req = requests.post(url, headers=headers, json=data)
+            elif data_type == 'data':
+                req = requests.post(url, headers=headers, data=data)
+            else:
+                logger.error("Unexpected data type in post-request: data type = %s" % data_type)
+                raise AssertionError("Unexpected data type in post-request: data type = %s" % data_type)
+
+        elif method == 'put':
+            if data_type == 'json':
+                req = requests.put(url, headers=headers, json=data)
+            elif data_type == 'data':
+                req = requests.put(url, headers=headers, data=data)
+            else:
+                logger.error("Unexpected data type in put-request: data type = %s" % data_type)
+                raise AssertionError("Unexpected data type in put-request: data type = %s" % data_type)
         else:
-            os.environ['sleep_total'] = str(float(os.environ['sleep_total']) + float(os.environ.get('sleep_increment')))
-
-        if float(os.environ['sleep_total']) > float(os.environ.get('sleep_max')):
-            logger.error("Total sleep time of %.3f seconds exceeds maximum sleep time of %.3f seconds" %(float(os.environ.get("sleep_total")), float(os.environ.get("sleep_max"))))
-            raise AssertionError("Total sleep time of %.3f seconds exceeds maximum sleep time of %.3f seconds" %(float(os.environ.get("sleep_total")), float(os.environ.get("sleep_max"))))
-
-        logger.info("Sleeping for %.2f seconds" % float(os.environ.get("sleep_total")))
-        sleep(float(os.environ['sleep_total']))
-        req = requests.get(cv_url, headers=headers)
+            logger.error("Unexpected request method: request method = %s" % method)
+            raise AssertionError("Unexpected request method: request method = %s" % method)
 
         if req.status_code != 200:
             if req.status_code == 429:
-                req = self.recursive_request(cv_url, headers, float(os.environ.get("sleep_total")))                        
+                req = self.recursive_request(url, headers, req.headers.get('Retry-After'), method, data_type, data)                        
             else:
                 logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
                 raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-
-        try:
-            del os.environ['sleep_total']
-            return req
-        except KeyError:
-            return req
+        return req
 
     def get_paged_entities(self, path):
         logger.info("getting all paged")
@@ -267,10 +258,6 @@ class DataAccess:
         url = os.environ.get("base_url") + path
         status = ""
         for entity in entities:
-            if os.environ.get('sleep') is not None:
-                logger.debug("sleeping for %s milliseconds", os.environ.get('sleep'))
-                sleep(float(os.environ.get('sleep')))
-
             if entity["operation"] == "post":
                 status = self.__post_user(url, entity)
             elif entity["operation"] == "put":
@@ -294,10 +281,6 @@ class DataAccess:
         url = os.environ.get("base_url") + path
         status = ""
         for entity in entities:
-            if os.environ.get('sleep') is not None:
-                logger.debug("sleeping for %s milliseconds", os.environ.get('sleep'))
-                sleep(float(os.environ.get('sleep')))
-
             if entity["operation"] == "post":
                 status = self.__post_custom_tag(url, entity)
             elif entity["operation"] == "put":
