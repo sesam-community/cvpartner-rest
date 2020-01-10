@@ -15,6 +15,7 @@ logger = None
 format_string = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 logger = logging.getLogger('cvpartner-rest-service')
 
+
 # Log to stdout
 stdout_handler = logging.StreamHandler()
 stdout_handler.setFormatter(logging.Formatter(format_string))
@@ -45,7 +46,6 @@ def transform(obj):
     for k, v in obj.items():
         if k == "image":
             if dotdictify.dotdictify(v).large.url is not None:
-                logger.info("Encoding images from url to base64...")
                 res[k] = encode(v)
 
             else:
@@ -109,26 +109,23 @@ class DataAccess:
             req = requests.get(url, headers=headers)
 
             if req.status_code != 200:
-                logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-                raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+                req = self.check_429(req, cv_url, headers)
+
             clean = json.loads(req.text)
             offset += len(clean)
             cv_url = os.environ.get("base_url") + "v3/cvs/"
             for entity in clean:
+                if entity.get('deactivated', ""):
+                    pass
                 for k, v in entity.items():
                     if k == "id":
                         cv_url += v + "/"
                 for k, v in entity.items():
                     if k == "default_cv_id":
                         cv_url += v
-                if os.environ.get('sleep') is not None:
-                    logger.debug("sleeping for %s milliseconds", os.environ.get('sleep'))
-                    sleep(float(os.environ.get('sleep')))
                 req = requests.get(cv_url, headers=headers)
                 if req.status_code != 200:
-                    logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
-                    raise AssertionError(
-                        "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+                    req = self.check_429(req, cv_url, headers)
                 cv = json.loads(req.text)
                 if str_to_bool(os.environ.get('delete_company_images', "False")) == True:
                     for i in range(len(cv["project_experiences"])):
@@ -218,6 +215,44 @@ class DataAccess:
                 "Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
             abort(req.status_code, req.json())
         return str(req.status_code)
+
+    def check_429(self, req, cv_url, headers):
+        if req.status_code == 429:
+            if os.environ.get('sleep_increment') is not None:
+                return self.recursive_request(cv_url, headers, float(os.environ.get('sleep_increment')))                        
+            else:
+                logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+                raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+        else:
+            logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+            raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))        
+
+    def recursive_request(self, cv_url, headers, sleep_increment):
+        if os.environ.get('sleep_total') == None:
+            os.environ['sleep_total'] = str(sleep_increment)
+        else:
+            os.environ['sleep_total'] = str(float(os.environ['sleep_total']) + float(os.environ.get('sleep_increment')))
+
+        if float(os.environ['sleep_total']) > float(os.environ.get('sleep_max')):
+            logger.error("Total sleep time of %.3f seconds exceeds maximum sleep time of %.3f seconds" %(float(os.environ.get("sleep_total")), float(os.environ.get("sleep_max"))))
+            raise AssertionError("Total sleep time of %.3f seconds exceeds maximum sleep time of %.3f seconds" %(float(os.environ.get("sleep_total")), float(os.environ.get("sleep_max"))))
+
+        logger.info("Sleeping for %.2f seconds" % float(os.environ.get("sleep_total")))
+        sleep(float(os.environ['sleep_total']))
+        req = requests.get(cv_url, headers=headers)
+
+        if req.status_code != 200:
+            if req.status_code == 429:
+                req = self.recursive_request(cv_url, headers, float(os.environ.get("sleep_total")))                        
+            else:
+                logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+                raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
+
+        try:
+            del os.environ['sleep_total']
+            return req
+        except KeyError:
+            return req
 
     def get_paged_entities(self, path):
         logger.info("getting all paged")
