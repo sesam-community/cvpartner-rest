@@ -18,9 +18,6 @@ This microservice needs information about path to the url of the next page (more
 "reference_post": Data to send with POST to reference_url
 "reference_url": Path for GET of references.
 "references_path": Path to references in return object from reference_url
-"sleep_increment": Incremental time (s) the MS sleeps for each 429 response. The total sleep time adds up until it reached 'sleep_max'.
-"sleep_max": The maximum number of seconds the MS can sleep
-"sleep":  Miliseconds to sleep between each rest call.
 "user_url": Path to users in REST-api. Supports POST, PUT and GET.
 ```
 
