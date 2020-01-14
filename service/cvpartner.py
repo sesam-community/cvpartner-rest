@@ -203,36 +203,24 @@ class DataAccess:
             req = self.check_error(req, cv_url, headers, 'put', 'json', entity["payload"])
         return str(req.status_code)
 
-    def check_error(self, req, url, headers, method, data_type = None, data = None):
+    def check_error(self, req, url, headers, method, json = None, data = None):
         if req.status_code == 429:
-            return self.recursive_request(url, headers, req.headers.get('Retry-After'), method, data_type, data)                        
+            return self.recursive_request(url, headers, req.headers.get('Retry-After'), method, json, data)                        
         else:
             logger.error("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))
             raise AssertionError("Unexpected response status code: %d with response text %s" % (req.status_code, req.text))        
 
-    def recursive_request(self, url, headers, retry_after, method, data_type = None, data = None):
+    def recursive_request(self, url, headers, retry_after, method, json = None, data = None):
         logger.info("Sleeping for %.2f seconds" % float(retry_after))
         sleep(float(retry_after))
         if method == 'get':
             req = requests.get(url, headers=headers)
 
         elif method == 'post':
-            if data_type == 'json':
-                req = requests.post(url, headers=headers, json=data)
-            elif data_type == 'data':
-                req = requests.post(url, headers=headers, data=data)
-            else:
-                logger.error("Unexpected data type in post-request: data type = %s" % data_type)
-                raise AssertionError("Unexpected data type in post-request: data type = %s" % data_type)
+            req = requests.post(url, headers=headers, json=json, data=data)
 
         elif method == 'put':
-            if data_type == 'json':
-                req = requests.put(url, headers=headers, json=data)
-            elif data_type == 'data':
-                req = requests.put(url, headers=headers, data=data)
-            else:
-                logger.error("Unexpected data type in put-request: data type = %s" % data_type)
-                raise AssertionError("Unexpected data type in put-request: data type = %s" % data_type)
+            req = requests.put(url, headers=headers, json=json, data=data)
         else:
             logger.error("Unexpected request method: request method = %s" % method)
             raise AssertionError("Unexpected request method: request method = %s" % method)
