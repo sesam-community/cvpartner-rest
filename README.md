@@ -18,7 +18,6 @@ This microservice needs information about path to the url of the next page (more
 "reference_post": Data to send with POST to reference_url
 "reference_url": Path for GET of references.
 "references_path": Path to references in return object from reference_url
-"sleep":  Miliseconds to sleep between each rest call.
 "user_url": Path to users in REST-api. Supports POST, PUT and GET.
 ```
 
@@ -216,7 +215,6 @@ PUT user
       "entities_path": "values",
       "headers": "{'Accept':'application/json', 'Content-Type':'application/json', 'Authorization':'$SECRET(token)'}",
       "next_page": "next.href",
-      "sleep": "0.400",
       "user_url": "v1/user",
     },
     "image": "sesamcommunity/cvpartner-rest:latest",
