@@ -215,8 +215,6 @@ PUT user
       "entities_path": "values",
       "headers": "{'Accept':'application/json', 'Content-Type':'application/json', 'Authorization':'$SECRET(token)'}",
       "next_page": "next.href",
-      "sleep_increment": 0.5,
-      "sleep_max": 20,
       "user_url": "v1/user",
     },
     "image": "sesamcommunity/cvpartner-rest:latest",

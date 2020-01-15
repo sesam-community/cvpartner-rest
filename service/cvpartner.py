@@ -213,14 +213,8 @@ class DataAccess:
     def recursive_request(self, url, headers, retry_after, method, json = None, data = None):
         logger.info("Sleeping for %.2f seconds" % float(retry_after))
         sleep(float(retry_after))
-        if method == 'get':
-            req = requests.get(url, headers=headers)
-
-        elif method == 'post':
-            req = requests.post(url, headers=headers, json=json, data=data)
-
-        elif method == 'put':
-            req = requests.put(url, headers=headers, json=json, data=data)
+        if method in('get', 'post', 'put'):
+            req = requests.request(method=method, url=url, headers=headers, json=json, data=data)
         else:
             logger.error("Unexpected request method: request method = %s" % method)
             raise AssertionError("Unexpected request method: request method = %s" % method)
